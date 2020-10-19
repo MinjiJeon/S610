@@ -23,9 +23,11 @@ llr <- function(x, y, z, omega) {
 compute_f_hat <- function(z, x, y, omega) {
   w <- make_weight_vector(z, x, omega) # MJ
   X <- make_predictor_matrix(x)
-  f_hat <- c(1, z) %*% solve(t(X) %*% apply(X, function(v) v * w)) %*% t(X) %*% apply(c(1,y), function(v) v * w) #MJ
+  f_hat <- c(1, z) %*% solve(t(X) %*% apply(X, 2, function(v) v * w)) %*% t(X) %*% sapply(1:length(y), function(i) y[i] * w[i]) #MJ
   return(f_hat)
 }
+
+
 
 make_weight_vector <- function(z, x, omega) { # MJ
   r <- abs(x - z) / omega  # this is a vector of the same length as x
