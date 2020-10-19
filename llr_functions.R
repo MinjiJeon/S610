@@ -23,9 +23,10 @@ llr <- function(x, y, z, omega) {
 compute_f_hat <- function(z, x, y, omega) {
   w <- make_weight_vector(z, x, omega) # MJ
   X <- make_predictor_matrix(x)
-  f_hat <- c(1, z) %*% solve(t(X) %*% apply(X, 2, function(v) v * w)) %*% t(X) %*% sapply(1:length(y), function(i) y[i] * w[i]) #MJ
+  f_hat <- c(1, z) %*% solve(t(X) %*% sweep(x = X, MARGIN = 2, STATS = w, FUN = "*")) %*% t(X) %*% sweep(x = y, MARGIN = 2, STATS = w, FUN = "*") #MJ
   return(f_hat)
 }
+
 
 
 
