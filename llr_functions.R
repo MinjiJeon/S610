@@ -21,10 +21,16 @@ llr <- function(x, y, z, omega) {
 #' @param omega (numeric) must be a scalar
 #' @return (numeric) scalar
 compute_f_hat <- function(z, x, y, omega) {
-  Wz <- make_weight_matrix(z, x, omega)
+  w <- make_weight_vector(z, x, omega) # MJ
   X <- make_predictor_matrix(x)
-  f_hat <- c(1, z) %*% solve(t(X) %*% Wz %*% X) %*% t(X) %*% Wz %*% y
+  f_hat <- c(1, z) %*% solve(t(X) %*% apply(X, function(v) v * w)) %*% t(X) %*% apply(c(1,y), function(v) v * w) #MJ
   return(f_hat)
+}
+
+make_weight_vector <- function(z, x, omega) { # MJ
+  r <- abs(x - z) / omega  # this is a vector of the same length as x
+  w <- sapply(r, W)  # this is a vector of the same length as x and r
+  return(w)
 }
 
 #' @param z (numeric) must be a scalar
@@ -92,3 +98,4 @@ fits <- llr(z = z, x = x, y = y, omega = pi / 3)
 # plot the data and the smoother
 plot(x, y)
 lines(z, fits, col = 'red')
+
