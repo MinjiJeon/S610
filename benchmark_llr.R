@@ -48,11 +48,3 @@ fits.2 <- llr(z = z2, x = x2, y = y2, omega = pi / 3)
 # plot the data and the smoother
 plot(x2, y2)
 lines(z2, fits.2, col = 'red')
-
-
-
-library(profvis)
-profvis(llr(z = z1, x = x1, y = y1, omega = 2))
-
-
-cat()
