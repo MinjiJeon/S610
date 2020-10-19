@@ -24,8 +24,13 @@ z1 <- seq(0, 15, length.out = 100)
 fits.1 <- llr(z = z1, x = x1, y = y1, omega = 2)
 
 # plot the data and the smoother
-plot(x1, y1)
-lines(z, fits.1, col = 'red')
+# plot(x1, y1)
+# lines(z1, fits.1, col = 'red')
+
+library(microbenchmark)
+microbenchmark(
+  fits.1 <- llr(z = z1, x = x1, y = y1, omega = 2)
+)
 
 
 # --- example 2 --- #
@@ -44,10 +49,7 @@ fits.2 <- llr(z = z2, x = x2, y = y2, omega = pi / 3)
 plot(x2, y2)
 lines(z2, fits.2, col = 'red')
 
-library(microbenchmark)
-microbenchmark(
-  fits.1 <- llr(z = z1, x = x1, y = y1, omega = 2),
-)
+
 
 library(profvis)
 profvis(llr(z = z1, x = x1, y = y1, omega = 2))
