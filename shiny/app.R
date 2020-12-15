@@ -203,73 +203,91 @@ ui <- fluidPage(
             )
         )
     )),
-######################### 2-a. Second tab: Proportion ##########################
-  tabPanel(title = "Proportion",
+######################### 2-b. Second tab: Proportion ##########################
+    tabPanel(title = "Proportion",
 
            # 2nd Sidebar
            sidebarLayout(
-             sidebarPanel(
-               radioButtons(inputId = "interest_2", 
-                            label = "A-1. Compare:", 
-                            choices = c("Year" = "year",
-                                        "Gender" = "gender",
-                                        "Ethnicity" = "ethnicity", 
-                                        "Locale" = "locale")
+               sidebarPanel(
+                   radioButtons(inputId = "interest_2", 
+                                label = "A-1. Compare:", 
+                                choices = c("Year" = "year",
+                                            "Gender" = "gender",
+                                            "Ethnicity" = "ethnicity", 
+                                            "Locale" = "locale")
+                   ),
+                   conditionalPanel(
+                     condition = "input.interest_2 != 'year'",
+                     sliderInput("year_slider_2", "A-2. Year:",
+                                 min = 2014, max = 2020, sep = "",
+                                 value = 2020)
+                   ),
+                   # Adjusting the data
+                   radioButtons(inputId = "adjust_2", 
+                                label = "B-1. Which part of the data would you include/exclude?", 
+                                choices = c("Gender" = "gender",
+                                            "Ethnicity" = "ethnicity", 
+                                            "Locale" = "locale",
+                                            "Course" = "course")
+                   ),
+    
+                   conditionalPanel(
+                     condition = "input.adjust_2 == 'gender'",
+                     checkboxGroupInput("gender_check_2", "B-2. Genders to show:",
+                                        choices = c("Female", "Male"),
+                                        selected = c("Female", "Male"))
+                   ),
+                   conditionalPanel(
+                     condition = "input.adjust_2 == 'ethnicity'",
+                     checkboxGroupInput("ethnicity_check_2", "B-2. Ethnicity to show:",
+                                        choices = ethnicity.order,
+                                        selected = ethnicity.order)
+                   ),
+                   conditionalPanel(
+                     condition = "input.adjust_2 == 'locale'",
+                     checkboxGroupInput("locale_check_2", "B-2. Locales to show:",
+                                        choices = locale.order,
+                                        selected = locale.order)
+                   ),
+                   conditionalPanel(
+                     condition = "input.adjust_2 == 'course'",
+                     selectInput("course_select_2", 
+                                 "B-2. Courses to show:
+                                (Press backspace to delete any selected course.)",
+                                 choices = course.order,
+                                 multiple = TRUE,
+                                 selected = course.order)
+                   )
                ),
-               conditionalPanel(
-                 condition = "input.interest_2 != 'year'",
-                 sliderInput("year_select_2", "A-2. Year:",
+               
+               # 2nd Main panel for the plot & table
+               mainPanel(
+                  tabsetPanel(
+                      tabPanel("Plot", plotly::plotlyOutput("plot_prop",
+                                                         width = "95%", height = "500px")),
+                      tabPanel("Table", DT::DTOutput("table_prop"))
+                  )
+               )
+           )
+    ),
+
+    tabPanel(title = "District",
+             sidebarLayout(
+               sidebarPanel(
+                 p("The number of CS enrollees,"),
+                 p("the number of total students in a corporation,"),
+                 p("and its proportion in the year:"),
+                 sliderInput("year_slider_3", "",
                              min = 2014, max = 2020, sep = "",
                              value = 2020)
                ),
-               # Adjusting the data
-               radioButtons(inputId = "adjust_2", 
-                            label = "B-1. Which part of the data would you include/exclude?", 
-                            choices = c("Gender" = "gender",
-                                        "Ethnicity" = "ethnicity", 
-                                        "Locale" = "locale",
-                                        "Course" = "course")
-               ),
-
-               conditionalPanel(
-                 condition = "input.adjust_2 == 'gender'",
-                 checkboxGroupInput("gender_check_2", "B-2. Genders to show:",
-                                    choices = c("Female", "Male"),
-                                    selected = c("Female", "Male"))
-               ),
-               conditionalPanel(
-                 condition = "input.adjust_2 == 'ethnicity'",
-                 checkboxGroupInput("ethnicity_check_2", "B-2. Ethnicity to show:",
-                                    choices = ethnicity.order,
-                                    selected = ethnicity.order)
-               ),
-               conditionalPanel(
-                 condition = "input.adjust_2 == 'locale'",
-                 checkboxGroupInput("locale_check_2", "B-2. Locales to show:",
-                                    choices = locale.order,
-                                    selected = locale.order)
-               ),
-               conditionalPanel(
-                 condition = "input.adjust_2 == 'course'",
-                 selectInput("course_select_2", 
-                             "B-2. Courses to show:
-                            (Press backspace to delete any selected course.)",
-                             choices = course.order,
-                             multiple = TRUE,
-                             selected = course.order)
+               mainPanel(
+                 DT::DTOutput("table_district")
                )
-             ),
-             
-             # 2nd Main panel for the plot & table
-             mainPanel(
-               tabsetPanel(
-                 tabPanel("Plot", plotly::plotlyOutput("plot_prop",
-                                                       width = "95%", height = "500px")),
-                 tabPanel("Table", DT::DTOutput("table_prop"))
-               )
+             )
     )
-  )
-)))
+
+))
 ################################################################################
 #
 #
@@ -278,7 +296,7 @@ ui <- fluidPage(
 
 server <- function(input, output) {
   
-############################### 3-a. Reactive Data #############################
+############################ 3-a. First tab: Absolute ##########################
     enr_react <- reactive({
         enr %>% 
         subset(year >= input$year_slider[1] & year <= input$year_slider[2]) %>% 
@@ -288,112 +306,6 @@ server <- function(input, output) {
         subset(course %in% input$course_select)
     })
     
-    prop_react <- reactive({
-        enr_pop %>%
-        subset(year == input$year_select_2) %>%
-        subset(gender %in% input$gender_check_2) %>%
-        subset(ethnicity %in% input$ethnicity_check_2) %>%
-        subset(locale %in% input$locale_check_2) %>%
-        subset(course %in% input$course_select_2)
-    })
-    
-    gg2 <- list(coord_flip(), 
-               theme_bw(),
-               theme(
-                 panel.grid.major.y = element_blank(),
-                 panel.grid.minor.x = element_blank(),
-                 panel.border = element_blank(),
-                 axis.ticks.x = element_blank(),
-                 axis.ticks.y = element_blank()
-               ),
-               ylim(0, 10)
-    )
-
-    output$plot_prop <- plotly::renderPlotly({
-
-      if (input$interest_2 == "year") {
-        enr_pop %>%
-          subset(gender %in% input$gender_check_2) %>%
-          subset(ethnicity %in% input$ethnicity_check_2) %>%
-          subset(locale %in% input$locale_check_2) %>%
-          subset(course %in% input$course_select_2) %>%
-          group_by(year) %>% 
-          summarize(proportion = sum(N) / sum(corp_n) * length(unique(course)) * 100) %>%
-          mutate(year = factor(year)) %>% 
-          ggplot(aes(x = year, y = proportion)) +
-          geom_segment(aes(xend = year, yend = 0), color = "mediumslateblue", 
-                       size = 1.2, alpha = .4) +
-          geom_point(size = 4, color = "midnightblue", fill = "mediumslateblue", 
-                     alpha = .7, shape = 23, stroke = 1.2) +
-          gg2 +
-          labs(x = "Year", y = "Proportion(%)")
-      } else if (input$interest_2 == "gender") {
-        prop_react() %>% 
-          group_by(gender) %>% 
-          summarize(proportion = sum(N) / sum(corp_n) * length(unique(course)) * 100) %>% 
-          arrange(proportion) %>% # First sort by val. This sort the dataframe but NOT the factor levels
-          mutate(gender = factor(gender, levels = gender)) %>% # This trick update the factor levels
-          ggplot(aes(x = gender, y = proportion)) +
-          geom_segment(aes(xend = gender, yend = 0), color = "indianred1", 
-                       size = 1.2, alpha = .4) +
-          geom_point(size = 4, color = "firebrick1", fill = "indianred1", 
-                     alpha = .7, shape = 21, stroke = 1.2) +
-          gg2 +
-          labs(x = "Gender", y = "Proportion(%)")
-      } else if (input$interest_2 == "ethnicity") {
-        prop_react() %>% 
-          group_by(ethnicity) %>% 
-          summarize(proportion = sum(N) / sum(corp_n) * length(unique(course)) * 100) %>%
-          arrange(proportion) %>% # First sort by val. This sort the dataframe but NOT the factor levels
-          mutate(ethnicity = factor(ethnicity, levels = ethnicity)) %>% # This trick update the factor levels
-          ggplot(aes(x = ethnicity, y = proportion)) +
-          geom_segment(aes(xend = ethnicity, yend = 0), color = "darkslategray3", 
-                       size = 1.2, alpha = .4) +
-          geom_point(size = 4, color = "lightseagreen", fill = "darkslategray3", 
-                     alpha = .7, shape = 22, stroke = 1.2) +
-          gg2 +
-          labs(x = "Ethnicity", y = "Proportion(%)")
-      } else if (input$interest_2 == "locale") {
-        prop_react() %>%
-          group_by(locale) %>% 
-          summarize(proportion = sum(N) / sum(corp_n) * length(unique(course)) * 100) %>% 
-          arrange(proportion) %>% # First sort by val. This sort the dataframe but NOT the factor levels
-          mutate(locale = factor(locale, levels = locale)) %>% # This trick update the factor levels
-          ggplot(aes(x = locale, y = proportion)) +
-          geom_point(size = 4, color = "dodgerblue4", alpha = .7, shape = 8, stroke = 1) +
-          geom_segment(aes(xend = locale, yend = 0), color = "dodgerblue2", 
-                       size = 1.2, alpha = .4) +
-          gg2 +
-          labs(x = "Locale", y = "Proportion(%)")
-      }
-    })
-
-    output$table_prop <- DT::renderDT({
-      if (input$interest_2 == "year") {
-        enr_pop %>%
-          subset(gender %in% input$gender_check_2) %>%
-          subset(ethnicity %in% input$ethnicity_check_2) %>%
-          subset(locale %in% input$locale_check_2) %>%
-          subset(course %in% input$course_select_2) %>%
-          group_by(year) %>% 
-          summarize(proportion = sum(N) / sum(corp_n) * length(unique(course)) * 100)
-      } else if (input$interest_2 == "gender") {
-        prop_react() %>% 
-          group_by(gender) %>% 
-          summarize(proportion = sum(N) / sum(corp_n) * length(unique(course)) * 100)
-      } else if (input$interest_2 == "ethnicity") {
-        prop_react() %>% 
-          group_by(ethnicity) %>% 
-          summarize(proportion = sum(N) / sum(corp_n) * length(unique(course)) * 100)
-      } else if (input$interest_2 == "locale") {
-        prop_react() %>%
-          group_by(locale) %>% 
-          summarize(proportion = sum(N) / sum(corp_n) * length(unique(course)) * 100)
-      }
-    })
-
-############################### 3-b. Rendering Plots ###########################
-    # 3-b-1. Year Total
     gg1 <- list(expand_limits(y = 0),
                 labs(x = "", y = "Number of Enrollees"),
                 theme_bw(),
@@ -407,6 +319,7 @@ server <- function(input, output) {
     )
     
     output$plot <- plotly::renderPlotly({
+      # 3-a-1. Year Total
         if (input$interest == "year") {
           df = enr_react() %>% group_by(year) %>% summarize(n = sum(N))
           if (input$plot_type == "line") {
@@ -422,7 +335,7 @@ server <- function(input, output) {
               geom_col(fill = "pink") +
               gg1
           }
-    # 3-b-2. Gender
+    # 3-a-2. Gender
         } else if (input$interest == "gender") {
             df = enr_react() %>% 
               group_by(year, gender) %>% summarize(n = sum(N))
@@ -445,7 +358,7 @@ server <- function(input, output) {
                 geom_bar(stat = "identity", position = "dodge") +
                 gg1
             }
-    # 3-b-3. Ethnicity
+    # 3-a-3. Ethnicity
         } else if (input$interest == "ethnicity") {
             df = enr_react() %>% group_by(year, ethnicity) %>% 
               summarize(n = sum(N)) %>% arrange(n) %>% 
@@ -480,7 +393,7 @@ server <- function(input, output) {
                   values = wesanderson::wes_palette(
                     n = length(ethnicity.order), name = "Moonrise3"))
             }
-    # 3-b-4. Locales
+    # 3-a-4. Locales
         } else {
             df <- enr_react() %>% 
               group_by(year, locale) %>% 
@@ -511,10 +424,168 @@ server <- function(input, output) {
         }
         
     })
-############################### 3-c. Rendering Tables ###########################
     output$table <- DT::renderDT({
-        enr_react()
+      df.table = enr_react()
+      # 3-a-1. Year Total
+      if (input$interest == "year") {
+        df.table %>% 
+          group_by(year) %>% 
+          summarize(n = sum(N))
+        # 3-a-2. Gender
+      } else if (input$interest == "gender") {
+        df.table %>% 
+          group_by(year, gender) %>% 
+          summarize(n = sum(N))
+        # 3-a-3. Ethnicity
+      } else if (input$interest == "ethnicity") {
+        df.table %>% group_by(year, ethnicity) %>% 
+          summarize(n = sum(N))
+        # 3-a-4. Locales
+      } else {
+        df.table %>% 
+          group_by(year, locale) %>% 
+          summarize(n = sum(N))
+      }
     })
+    
+    
+############################ 3-b. Second tab: Proportion #######################
+    
+    prop_react <- reactive({
+      enr_pop %>%
+        subset(year == input$year_slider_2) %>%
+        subset(gender %in% input$gender_check_2) %>%
+        subset(ethnicity %in% input$ethnicity_check_2) %>%
+        subset(locale %in% input$locale_check_2) %>%
+        subset(course %in% input$course_select_2)
+    })
+    
+    gg2 <- list(coord_flip(), 
+                theme_bw(),
+                theme(
+                  panel.grid.major.y = element_blank(),
+                  panel.grid.minor.x = element_blank(),
+                  panel.border = element_blank(),
+                  axis.ticks.x = element_blank(),
+                  axis.ticks.y = element_blank()
+                ),
+                ylim(0, 10)
+    )
+    
+    output$plot_prop <- plotly::renderPlotly({
+      
+      if (input$interest_2 == "year") {
+        # 3-b-1. Year
+        enr_pop %>%
+          subset(gender %in% input$gender_check_2) %>%
+          subset(ethnicity %in% input$ethnicity_check_2) %>%
+          subset(locale %in% input$locale_check_2) %>%
+          subset(course %in% input$course_select_2) %>%
+          group_by(year) %>% 
+          summarize(proportion = sum(N) / sum(corp_n) * length(unique(course)) * 100) %>%
+          mutate(year = factor(year)) %>% 
+          ggplot(aes(x = year, y = proportion)) +
+          geom_segment(aes(xend = year, yend = 0), color = "mediumslateblue", 
+                       size = 1.2, alpha = .4) +
+          geom_point(size = 4, color = "midnightblue", fill = "mediumslateblue", 
+                     alpha = .7, shape = 23, stroke = 1.2) +
+          gg2 +
+          labs(x = "Year", y = "Proportion(%)")
+      } else if (input$interest_2 == "gender") {
+        # 3-b-2. Gender
+        prop_react() %>% 
+          group_by(gender) %>% 
+          summarize(proportion = sum(N) / sum(corp_n) * length(unique(course)) * 100) %>% 
+          arrange(proportion) %>% # First sort by val. This sort the dataframe but NOT the factor levels
+          mutate(gender = factor(gender, levels = gender)) %>% # This trick update the factor levels
+          ggplot(aes(x = gender, y = proportion)) +
+          geom_segment(aes(xend = gender, yend = 0), color = "indianred1", 
+                       size = 1.2, alpha = .4) +
+          geom_point(size = 4, color = "firebrick1", fill = "indianred1", 
+                     alpha = .7, shape = 21, stroke = 1.2) +
+          gg2 +
+          labs(x = "Gender", y = "Proportion(%)")
+      } else if (input$interest_2 == "ethnicity") {
+        # 3-b-3. Ethnicity
+        prop_react() %>% 
+          group_by(ethnicity) %>% 
+          summarize(proportion = sum(N) / sum(corp_n) * length(unique(course)) * 100) %>%
+          arrange(proportion) %>% # First sort by val. This sort the dataframe but NOT the factor levels
+          mutate(ethnicity = factor(ethnicity, levels = ethnicity)) %>% # This trick update the factor levels
+          ggplot(aes(x = ethnicity, y = proportion)) +
+          geom_segment(aes(xend = ethnicity, yend = 0), color = "darkslategray3", 
+                       size = 1.2, alpha = .4) +
+          geom_point(size = 4, color = "lightseagreen", fill = "darkslategray3", 
+                     alpha = .7, shape = 22, stroke = 1.2) +
+          gg2 +
+          labs(x = "Ethnicity", y = "Proportion(%)")
+      } else if (input$interest_2 == "locale") {
+        # 3-b-4. Locales
+        prop_react() %>%
+          group_by(locale) %>% 
+          summarize(proportion = sum(N) / sum(corp_n) * length(unique(course)) * 100) %>% 
+          arrange(proportion) %>% # First sort by val. This sort the dataframe but NOT the factor levels
+          mutate(locale = factor(locale, levels = locale)) %>% # This trick update the factor levels
+          ggplot(aes(x = locale, y = proportion)) +
+          geom_point(size = 4, color = "dodgerblue4", alpha = .7, shape = 8, stroke = 1) +
+          geom_segment(aes(xend = locale, yend = 0), color = "dodgerblue2", 
+                       size = 1.2, alpha = .4) +
+          gg2 +
+          labs(x = "Locale", y = "Proportion(%)")
+      }
+    })
+    
+    output$table_prop <- DT::renderDT({
+      if (input$interest_2 == "year") {
+        # 3-b-1. Year
+        enr_pop %>%
+          subset(gender %in% input$gender_check_2) %>%
+          subset(ethnicity %in% input$ethnicity_check_2) %>%
+          subset(locale %in% input$locale_check_2) %>%
+          subset(course %in% input$course_select_2) %>%
+          group_by(year) %>% 
+          summarize(proportion = sum(N) / sum(corp_n) * length(unique(course)) * 100)
+      } else if (input$interest_2 == "gender") {
+        # 3-b-2. Gender
+        prop_react() %>% 
+          group_by(gender) %>% 
+          summarize(proportion = sum(N) / sum(corp_n) * length(unique(course)) * 100)
+      } else if (input$interest_2 == "ethnicity") {
+        # 3-b-3. Ethnicity
+        prop_react() %>% 
+          group_by(ethnicity) %>% 
+          summarize(proportion = sum(N) / sum(corp_n) * length(unique(course)) * 100)
+      } else if (input$interest_2 == "locale") {
+        # 3-b-4. Locales
+        prop_react() %>%
+          group_by(locale) %>% 
+          summarize(proportion = sum(N) / sum(corp_n) * length(unique(course)) * 100)
+      }
+    })
+
+############################## 3-c. Third tab: District ########################
+    district_react <- reactive({
+      dist_enr <- enr %>%
+                  subset(year == input$year_slider_3) %>%
+                  group_by(year, corpID, corpName) %>% 
+                  summarize(enrollee = sum(N))
+      
+      dist_pop <- pop %>%
+                  subset(year == input$year_slider_3) %>%
+                  group_by(year, corpID, corpName) %>% 
+                  summarize(total = sum(corp_n))
+      
+      dist_enr_pop <- merge(dist_enr, dist_pop, 
+                            by = c("year", "corpID", "corpName")) %>%
+        mutate(proportion = enrollee / total * 100) %>% 
+        arrange(desc(proportion))
+    })
+    
+    output$table_district <- DT::renderDT({
+      district_react()
+    })
+      
+    
 }
 ################################################################################
 #
